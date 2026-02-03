@@ -1,8 +1,17 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="The Lost Signal", page_icon="🌌", layout="wide", initial_sidebar_state="collapsed")
-
+st.set_page_config(
+    page_title="The Lost Signal | ATHAR",  
+    page_icon="🌌",                          
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "An interactive game for Athar Exhibition 2026. Can you decode the signal?"
+    }
+)
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}

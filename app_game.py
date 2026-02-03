@@ -1,315 +1,343 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# --- إعدادات الصفحة ---
-st.set_page_config(page_title="The Lost Signal", page_icon="🌌", layout="wide")
+# --- إعدادات الصفحة (ملء الشاشة) ---
+st.set_page_config(page_title="The Lost Signal", page_icon="🔭", layout="wide", initial_sidebar_state="collapsed")
 
-# --- إخفاء القوائم ---
+# --- تنسيق CSS لإزالة الحواف وجعل اللعبة ملء الشاشة ---
 st.markdown("""
     <style>
+    /* إخفاء كل عناصر ستريم ليت الزائدة */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* إزالة الهوامش والحواف تماماً */
     body {margin: 0; padding: 0; overflow: hidden; background-color: black;}
-    .stApp {background-color: black;}
-    .block-container {padding: 0 !important; max-width: 100% !important;}
+    .stApp {background-color: black; margin: 0;}
+    .block-container {padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
+    
+    /* جعل الإطار يملأ الشاشة */
+    iframe {
+        width: 100vw !important;
+        height: 100vh !important;
+        border: none;
+        display: block;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # --- كود اللعبة (HTML + JavaScript) ---
-# هذا الكود يعمل داخل المتصفح مباشرة لضمان سرعة الصوت والحركة
 game_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <style>
-    body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
+    body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; user-select: none; }
     #gameCanvas { display: block; width: 100vw; height: 100vh; cursor: none; }
-    #ui-layer { position: absolute; top: 20px; left: 20px; color: #F4E4BC; pointer-events: none; }
-    h1 { margin: 0; font-size: 24px; text-shadow: 0 0 10px #5867dd; }
-    p { font-size: 18px; color: #ccc; }
-    #word-box { 
-        position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-        font-size: 28px; color: #fff; background: rgba(0,0,0,0.5); padding: 10px 20px; 
-        border: 1px solid #5867dd; border-radius: 10px; pointer-events: none;
+    
+    /* واجهة المستخدم العلوية */
+    #ui-layer { 
+        position: absolute; top: 30px; left: 30px; 
+        color: white; pointer-events: none; letter-spacing: 2px;
     }
+    h1 { margin: 0; font-size: 20px; font-weight: normal; color: #888; }
+    h2 { margin: 5px 0 0 0; font-size: 24px; color: white; }
+    
+    /* شريط الكلمات في الأسفل */
+    #word-container { 
+        position: absolute; bottom: 40px; width: 100%; text-align: center; pointer-events: none; 
+    }
+    #word-box { 
+        display: inline-block;
+        font-size: 24px; color: #fff; background: rgba(0,0,0,0.7); 
+        padding: 15px 30px; border: 1px solid white; border-radius: 0;
+        text-transform: uppercase; letter-spacing: 3px;
+    }
+
+    /* شاشة البداية */
     #start-screen {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
-        justify-content: center; align-items: center; color: white; z-index: 10;
+        background: black; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 10;
     }
-    button {
-        padding: 15px 40px; font-size: 24px; background: #5867dd; color: white;
-        border: none; border-radius: 30px; cursor: pointer; margin-top: 20px;
-        box-shadow: 0 0 20px #5867dd; transition: transform 0.2s;
+    .btn {
+        padding: 15px 50px; font-size: 20px; background: transparent; color: white;
+        border: 2px solid white; cursor: pointer; margin-top: 30px;
+        font-family: 'Courier New', monospace; letter-spacing: 2px;
+        transition: all 0.3s;
     }
-    button:hover { transform: scale(1.1); }
-    .hidden { display: none !important; }
+    .btn:hover { background: white; color: black; }
     
-    /* شهادة النهاية */
+    /* شاشة النهاية (الشهادة) */
     #cert-screen {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background: #0e0e0e; display: none; flex-direction: column;
         justify-content: center; align-items: center; z-index: 20;
     }
-    #cert-canvas { border: 5px solid #F4E4BC; box-shadow: 0 0 30px rgba(244, 228, 188, 0.2); }
+    
+    .hidden { display: none !important; }
+    
+    /* المؤقت */
+    #timer-display {
+        position: absolute; top: 30px; right: 30px;
+        font-size: 30px; color: white; font-weight: bold;
+    }
+    .warning { color: red !important; }
+
 </style>
 </head>
 <body>
 
 <div id="start-screen">
-    <h1 style="font-size: 50px; color: #F4E4BC;">🌌 THE LOST SIGNAL</h1>
-    <p>Move your mouse to find the hidden stars.</p>
-    <p>Listen to the signal sound 🔊</p>
-    <button onclick="startGame()">START MISSION</button>
+    <h1 style="font-size: 40px; color: white; margin-bottom: 20px;">ATHAR EVENT</h1>
+    <p style="color: #aaa; font-size: 16px;">MOVE MOUSE TO LOCATE SIGNALS</p>
+    <button class="btn" onclick="startGame()">INITIATE MISSION</button>
 </div>
 
 <div id="ui-layer">
-    <h1 id="level-txt">LEVEL 1/5</h1>
-    <p id="status-txt">Searching for signal...</p>
+    <h1 id="level-label">SIGNAL STRENGTH</h1>
+    <div style="width: 200px; height: 10px; border: 1px solid #555; margin-top: 5px;">
+        <div id="signal-bar" style="width: 0%; height: 100%; background: white;"></div>
+    </div>
+    <p id="level-counter" style="margin-top: 10px; color: #aaa;">TARGET 1 / 7</p>
 </div>
 
-<div id="word-box">🔒 LOCKED</div>
+<div id="timer-display">60</div>
+
+<div id="word-container">
+    <div id="word-box">LOCKED</div>
+</div>
 
 <canvas id="gameCanvas"></canvas>
 
 <div id="cert-screen">
-    <canvas id="cert-canvas" width="800" height="600"></canvas>
-    <button onclick="downloadCert()">📥 Download Certificate</button>
-    <button onclick="location.reload()" style="background: #333; margin-top:10px; font-size:18px;">↻ New Game</button>
+    <canvas id="cert-canvas" width="800" height="600" style="border: 2px solid white; margin-bottom: 20px;"></canvas>
+    <div>
+        <button class="btn" onclick="downloadCert()">DOWNLOAD</button>
+        <button class="btn" onclick="location.reload()" style="margin-left: 20px;">RESTART</button>
+    </div>
 </div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // إعدادات الشاشة
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // متغيرات اللعبة
+    // إعدادات اللعبة
+    // الجملة الجديدة الأطول
+    const sentence = ["ETHICS", "IS", "THE", "COMPASS", "OF", "ARTIFICIAL", "INTELLIGENCE"];
     let level = 1;
-    const maxLevels = 5;
-    const sentence = ["Ethics", "is", "the", "Compass", "of AI"];
+    const maxLevels = sentence.length;
     let foundWords = [];
+    
     let target = { x: 0, y: 0 };
     let mouse = { x: canvas.width/2, y: canvas.height/2 };
     let gameRunning = false;
-    let audioCtx, osc, gainNode;
+    
+    // المؤقت
+    let timeLeft = 60;
+    let timerInterval;
 
-    // النجوم الخلفية
+    // النجوم
     const stars = [];
-    for(let i=0; i<300; i++) {
+    for(let i=0; i<400; i++) {
         stars.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            size: Math.random() * 2,
-            baseSize: Math.random() * 2
+            size: Math.random() * 1.5,
+            baseSize: Math.random() * 1.5
         });
     }
 
     function spawnTarget() {
-        // مكان عشوائي للهدف مع هامش
         target.x = Math.random() * (canvas.width - 200) + 100;
         target.y = Math.random() * (canvas.height - 200) + 100;
     }
 
-    // --- نظام الصوت (الرادار) ---
-    function initAudio() {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        osc = audioCtx.createOscillator();
-        gainNode = audioCtx.createGain();
+    function startTimer() {
+        timeLeft = 60;
+        document.getElementById('timer-display').innerText = timeLeft;
+        document.getElementById('timer-display').classList.remove('warning');
         
-        osc.type = 'sine';
-        osc.frequency.value = 200; // تردد البداية
-        gainNode.gain.value = 0;   // صامت في البداية
-        
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        osc.start();
+        timerInterval = setInterval(() => {
+            if(!gameRunning) return;
+            timeLeft--;
+            document.getElementById('timer-display').innerText = timeLeft;
+            
+            if(timeLeft <= 10) {
+                document.getElementById('timer-display').classList.add('warning');
+            }
+            
+            if(timeLeft <= 0) {
+                gameOver();
+            }
+        }, 1000);
     }
 
-    function updateAudio(dist, maxDist) {
-        if (!gameRunning) return;
-        
-        // كل ما قربت المسافة (dist) يقل، الصوت يزيد
-        let proximity = 1 - (dist / (maxDist * 0.6)); // حساسية الرادار
-        proximity = Math.max(0, proximity); // لا يقل عن صفر
-
-        // رفع الصوت
-        gainNode.gain.setTargetAtTime(proximity * 0.5, audioCtx.currentTime, 0.1);
-        
-        // تغيير النغمة (Pitch)
-        // كل ما قربت تصير النغمة أحدّ وأعلى
-        osc.frequency.setTargetAtTime(200 + (proximity * 800), audioCtx.currentTime, 0.1);
+    function gameOver() {
+        gameRunning = false;
+        clearInterval(timerInterval);
+        alert("TIME EXPIRED. SIGNAL LOST.");
+        location.reload();
     }
 
-    // --- تشغيل اللعبة ---
     function startGame() {
         document.getElementById('start-screen').classList.add('hidden');
-        initAudio();
         spawnTarget();
         gameRunning = true;
+        startTimer();
         loop();
     }
 
-    // --- حركة الماوس ---
     window.addEventListener('mousemove', e => {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
     });
 
-    // --- النقر (Scan) ---
     window.addEventListener('mousedown', () => {
         if (!gameRunning) return;
         
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
         
-        // إذا كان قريب جداً (أقل من 50 بكسل)
+        // إذا كان الهدف في النطاق
         if (dist < 50) {
             winLevel();
         }
     });
 
     function winLevel() {
-        // فلاش أخضر
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+        // فلاش أبيض بسيط
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         foundWords.push(sentence[level-1]);
-        document.getElementById('word-box').innerText = "✅ " + foundWords.join(" ... ");
+        document.getElementById('word-box').innerText = foundWords.join(" ");
         
         if (level >= maxLevels) {
             gameWin();
         } else {
             level++;
-            document.getElementById('level-txt').innerText = `LEVEL ${level}/${maxLevels}`;
+            document.getElementById('level-counter').innerText = `TARGET ${level} / ${maxLevels}`;
             spawnTarget();
         }
     }
 
     function gameWin() {
         gameRunning = false;
-        gainNode.gain.value = 0; // إيقاف الصوت
+        clearInterval(timerInterval);
         document.getElementById('ui-layer').classList.add('hidden');
-        document.getElementById('word-box').classList.add('hidden');
+        document.getElementById('word-container').classList.add('hidden');
+        document.getElementById('timer-display').classList.add('hidden');
         document.getElementById('cert-screen').style.display = 'flex';
         drawCertificate();
     }
 
-    // --- حلقة الرسم (Game Loop) ---
     function loop() {
         if (!gameRunning) return;
         requestAnimationFrame(loop);
         
-        // مسح الشاشة
+        // مسح الخلفية
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
-        let maxDist = Math.hypot(canvas.width, canvas.height);
         
-        updateAudio(dist, maxDist);
+        // تحديث شريط الإشارة
+        let signalStrength = Math.max(0, 1 - (dist / 600));
+        document.getElementById('signal-bar').style.width = (signalStrength * 100) + "%";
 
-        // 1. رسم النجوم (تأثير الزوم)
-        // كل ما قربت من الهدف، النجوم تكبر وتبتعد عن المركز (تأثير السرعة)
-        let proximity = Math.max(0, 1 - (dist / 500));
+        // رسم النجوم
+        let proximity = Math.max(0, 1 - (dist / 400));
         
         stars.forEach(star => {
-            let size = star.baseSize + (proximity * 3); // النجوم تكبر
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + proximity})`;
+            // تأثير الحركة البسيط عند الاقتراب
+            let size = star.baseSize + (proximity * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + proximity})`;
             ctx.beginPath();
             ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // 2. رسم الهدف (يظهر فقط لما تكون قريب جداً)
-        if (dist < 150) {
-            let opacity = 1 - (dist / 150);
-            ctx.fillStyle = `rgba(255, 255, 0, ${opacity})`; // نجم أصفر
+        // رسم الهدف (مخفي، يظهر فقط عند الاقتراب جداً)
+        if (dist < 100) {
+            let opacity = 1 - (dist / 100);
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
             ctx.beginPath();
-            ctx.arc(target.x, target.y, 10, 0, Math.PI * 2);
+            ctx.arc(target.x, target.y, 5, 0, Math.PI * 2);
             ctx.fill();
-            
-            // هالة حول النجم
-            ctx.strokeStyle = `rgba(255, 255, 0, ${opacity * 0.5})`;
-            ctx.beginPath();
-            ctx.arc(target.x, target.y, 20 + Math.sin(Date.now()/100)*5, 0, Math.PI * 2);
-            ctx.stroke();
         }
 
-        // 3. رسم السكوب (الدائرة الحمراء/الخضراء)
-        let scopeColor = dist < 50 ? '#00ff00' : '#ff0000';
+        // رسم السكوب (الدائرة)
+        // اللون أبيض، يتحول للأخضر عند القرب الشديد
+        let scopeColor = dist < 50 ? '#00ff00' : '#ffffff';
         let scopeSize = 40;
         
         ctx.strokeStyle = scopeColor;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, scopeSize, 0, Math.PI * 2);
         ctx.stroke();
         
-        // خطوط التصويب
+        // خطوط التصويب (Crosshair)
         ctx.beginPath();
-        ctx.moveTo(mouse.x - scopeSize - 10, mouse.y);
-        ctx.lineTo(mouse.x + scopeSize + 10, mouse.y);
-        ctx.moveTo(mouse.x, mouse.y - scopeSize - 10);
-        ctx.lineTo(mouse.x, mouse.y + scopeSize + 10);
+        ctx.moveTo(mouse.x - scopeSize - 5, mouse.y);
+        ctx.lineTo(mouse.x + scopeSize + 5, mouse.y);
+        ctx.moveTo(mouse.x, mouse.y - scopeSize - 5);
+        ctx.lineTo(mouse.x, mouse.y + scopeSize + 5);
         ctx.stroke();
-
-        // 4. تحديث النصوص
-        let signalPercent = Math.floor(Math.max(0, 1 - (dist / 800)) * 100);
-        document.getElementById('status-txt').innerText = `SIGNAL STRENGTH: ${signalPercent}%`;
-        document.getElementById('status-txt').style.color = scopeColor;
     }
 
-    // --- رسم الشهادة ---
+    // --- الشهادة ---
     function drawCertificate() {
         const c = document.getElementById('cert-canvas');
         const cx = c.getContext('2d');
         
-        // خلفية
+        // خلفية سوداء
         cx.fillStyle = '#0e0e0e';
         cx.fillRect(0,0,800,600);
         
-        // إطار
-        cx.strokeStyle = '#F4E4BC';
-        cx.lineWidth = 10;
+        // إطار أبيض
+        cx.strokeStyle = 'white';
+        cx.lineWidth = 8;
         cx.strokeRect(20,20,760,560);
         
-        // نصوص
         cx.textAlign = 'center';
-        cx.fillStyle = '#F4E4BC';
-        cx.font = '40px Arial';
-        cx.fillText('CERTIFICATE OF COMPLETION', 400, 100);
         
+        // العنوان
         cx.fillStyle = 'white';
-        cx.font = '30px Arial';
-        cx.fillText('ATHAR EXHIBITION 2026', 400, 180);
+        cx.font = 'bold 40px Courier New';
+        cx.fillText('CERTIFICATE OF COMPLETION', 400, 120);
+        
+        cx.fillStyle = '#aaa';
+        cx.font = '30px Courier New';
+        cx.fillText('ATHAR EVENT 2026', 400, 180);
         
         cx.fillStyle = '#ccc';
-        cx.font = '20px Arial';
-        cx.fillText('The player has successfully found', 400, 300);
-        cx.fillText('ALL HIDDEN SIGNALS', 400, 340);
+        cx.font = '18px Courier New';
+        cx.fillText('MISSION SUCCESSFUL', 400, 300);
         
-        cx.fillStyle = '#F4E4BC';
-        cx.font = 'bold 30px Arial';
-        cx.fillText('"Ethics is the Compass of AI"', 400, 450);
+        // الجملة النهائية
+        cx.fillStyle = 'white';
+        cx.font = 'bold 24px Courier New';
+        cx.fillText('"ETHICS IS THE COMPASS', 400, 400);
+        cx.fillText('OF ARTIFICIAL INTELLIGENCE"', 400, 440);
         
         cx.fillStyle = '#555';
-        cx.font = '15px Arial';
-        cx.fillText('Created by Eng. Alyaa', 400, 550);
+        cx.font = '14px Courier New';
+        cx.fillText('Eng. Alyaa', 400, 550);
     }
 
-    // تحميل الشهادة
     window.downloadCert = function() {
         const link = document.createElement('a');
-        link.download = 'Athar_Certificate.png';
+        link.download = 'Athar_Event_Cert.png';
         link.href = document.getElementById('cert-canvas').toDataURL();
         link.click();
     }
 
-    // تعديل حجم الكانفاس عند تغيير حجم النافذة
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -320,5 +348,5 @@ game_html = """
 </html>
 """
 
-# عرض اللعبة داخل Streamlit
-components.html(game_html, height=800, scrolling=False)
+# عرض اللعبة بملء الشاشة
+components.html(game_html, height=1000, scrolling=False)

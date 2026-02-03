@@ -12,19 +12,7 @@ st.set_page_config(
         'About': "An interactive game for Athar Exhibition 2026. Can you decode the signal?"
     }
 
-st.markdown("""
-    <style>
-    header {visibility: hidden;}
-    
-    #MainMenu {visibility: hidden;}
-    
-    footer {visibility: hidden;}
-    
-    .stDeployButton {display:none;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
-    [data-testid="stDecoration"] {display:none;}
-    </style>
-""", unsafe_allow_html=True)
+
     
 )
 st.markdown("""

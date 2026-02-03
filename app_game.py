@@ -1,249 +1,324 @@
 import streamlit as st
-import random
-import time
-from PIL import Image, ImageDraw
-import io
-import plotly.graph_objects as go
-import numpy as np
-import os
+import streamlit.components.v1 as components
 
-# --- 1. إعدادات الصفحة ---
+# --- إعدادات الصفحة ---
 st.set_page_config(page_title="The Lost Signal", page_icon="🌌", layout="wide")
 
-# --- 2. تنسيق CSS ---
+# --- إخفاء القوائم ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .stApp {
-        background-color: #000000;
-        color: white;
-    }
-    /* تنسيق حاوية اللوقو ليكون في المنتصف */
-    .logo-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 20px;
-    }
-    .logo-img {
-        width: 150px; /* تحكمي في حجم اللوقو من هنا */
-        border-radius: 50%; /* يجعله دائرياً إذا كانت الصورة مربعة */
-        box-shadow: 0 0 20px rgba(88, 103, 221, 0.6); /* توهج أزرق */
-    }
-    /* تنسيق الأزرار */
-    .stButton>button {
-        width: 100%;
-        background-color: #5867dd; /* لون أزرق فضائي */
-        color: white;
-        font-weight: bold;
-        border-radius: 12px;
-        height: 50px;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #3f4cbea1;
-    }
-    /* صندوق الجملة السرية */
-    .clue-box {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        margin: 15px 0;
-        border: 1px solid #5867dd;
-        font-size: 18px;
-        color: #F4E4BC;
-    }
+    body {margin: 0; padding: 0; overflow: hidden; background-color: black;}
+    .stApp {background-color: black;}
+    .block-container {padding: 0 !important; max-width: 100% !important;}
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# --- 3. إدارة الحالة (Session State) ---
-if 'level' not in st.session_state: st.session_state.level = 1
-if 'target_x' not in st.session_state: st.session_state.target_x = random.randint(10, 90)
-if 'target_y' not in st.session_state: st.session_state.target_y = random.randint(10, 90)
-if 'game_over' not in st.session_state: st.session_state.game_over = False
-if 'game_won' not in st.session_state: st.session_state.game_won = False
-if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
-if 'hint_used' not in st.session_state: st.session_state.hint_used = False
-# توليد نجوم الخلفية مرة واحدة
-if 'bg_stars_x' not in st.session_state:
-    st.session_state.bg_stars_x = np.random.randint(0, 100, 250)
-    st.session_state.bg_stars_y = np.random.randint(0, 100, 250)
-
-# --- 4. إعدادات اللغة ---
-lang = st.radio("", ["العربية", "English"], horizontal=True)
-is_ar = lang == "العربية"
-
-texts = {
-    "title": "🌌 لغز الإشارة المفقودة" if is_ar else "🌌 The Lost Signal",
-    "desc": "استخدم أدوات التحكم لتحريك السكوب ⭕ على الخريطة والعثور على النجم المخفي." if is_ar else "Use controls to move the scope ⭕ on the map and find the hidden star.",
-    "level": "المستوى" if is_ar else "Level",
-    "secret": "الشفرة" if is_ar else "Code",
-    "time": "⏳" if is_ar else "⏳",
-    "x_label": "↔️ تحريك أفقي (X)" if is_ar else "↔️ Horizontal (X)",
-    "y_label": "↕️ تحريك عمودي (Y)" if is_ar else "↕️ Vertical (Y)",
-    "scan_btn": "📸 مسح المنطقة (SCAN)" if is_ar else "📸 SCAN AREA",
-    "hint_btn": "💡 تلميح" if is_ar else "💡 HINT",
-    "sig_strong": "إشارة قوية! الهدف في الموقع" if is_ar else "Strong Signal! Target locked",
-    "sig_weak": "لا توجد إشارة في هذا الموقع" if is_ar else "No signal in this area",
-    "win_msg": "✅ تم العثور على النجم!" if is_ar else "✅ Star Found!",
-    "fail_msg": "❌ لا يوجد شيء هنا.." if is_ar else "❌ Nothing here..",
-    "hint_l": "⬅️ الهدف لليسار" if is_ar else "⬅️ Target is Left",
-    "hint_r": "➡️ الهدف لليمين" if is_ar else "➡️ Target is Right",
-    "hint_u": "⬆️ الهدف للأعلى" if is_ar else "⬆️ Target is Up",
-    "hint_d": "⬇️ الهدف للأسفل" if is_ar else "⬇️ Target is Down",
-    "final_title": "🎉 اكتملت المهمة!" if is_ar else "🎉 Mission Complete!",
-    "download": "📄 تحميل الشهادة" if is_ar else "📄 Download Certificate",
-    "play_again": "🔄 العب مجدداً" if is_ar else "🔄 Play Again"
-}
-
-sentence_ar = ["أخلاقياتك", "هي", "بوصلة", "الذكاء", "الاصطناعي"]
-sentence_en = ["Ethics", "is", "the", "Compass", "of AI"]
-current_sentence = sentence_ar if is_ar else sentence_en
-
-# --- 5. دالة رسم الخريطة ---
-def draw_map(user_x, user_y, signal_strength):
-    fig = go.Figure()
-    # رسم نجوم الخلفية
-    fig.add_trace(go.Scatter(
-        x=st.session_state.bg_stars_x, y=st.session_state.bg_stars_y,
-        mode='markers', marker=dict(color='white', size=2, opacity=0.5), hoverinfo='none'
-    ))
+# --- كود اللعبة (HTML + JavaScript) ---
+# هذا الكود يعمل داخل المتصفح مباشرة لضمان سرعة الصوت والحركة
+game_html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; cursor: none; }
+    #ui-layer { position: absolute; top: 20px; left: 20px; color: #F4E4BC; pointer-events: none; }
+    h1 { margin: 0; font-size: 24px; text-shadow: 0 0 10px #5867dd; }
+    p { font-size: 18px; color: #ccc; }
+    #word-box { 
+        position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+        font-size: 28px; color: #fff; background: rgba(0,0,0,0.5); padding: 10px 20px; 
+        border: 1px solid #5867dd; border-radius: 10px; pointer-events: none;
+    }
+    #start-screen {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+        justify-content: center; align-items: center; color: white; z-index: 10;
+    }
+    button {
+        padding: 15px 40px; font-size: 24px; background: #5867dd; color: white;
+        border: none; border-radius: 30px; cursor: pointer; margin-top: 20px;
+        box-shadow: 0 0 20px #5867dd; transition: transform 0.2s;
+    }
+    button:hover { transform: scale(1.1); }
+    .hidden { display: none !important; }
     
-    # لون وحجم السكوب حسب الإشارة
-    scope_color = "#00ff00" if signal_strength > 85 else "#ff0000"
-    scope_size = 25 if signal_strength > 85 else 20
+    /* شهادة النهاية */
+    #cert-screen {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: #0e0e0e; display: none; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 20;
+    }
+    #cert-canvas { border: 5px solid #F4E4BC; box-shadow: 0 0 30px rgba(244, 228, 188, 0.2); }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+    <h1 style="font-size: 50px; color: #F4E4BC;">🌌 THE LOST SIGNAL</h1>
+    <p>Move your mouse to find the hidden stars.</p>
+    <p>Listen to the signal sound 🔊</p>
+    <button onclick="startGame()">START MISSION</button>
+</div>
+
+<div id="ui-layer">
+    <h1 id="level-txt">LEVEL 1/5</h1>
+    <p id="status-txt">Searching for signal...</p>
+</div>
+
+<div id="word-box">🔒 LOCKED</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="cert-screen">
+    <canvas id="cert-canvas" width="800" height="600"></canvas>
+    <button onclick="downloadCert()">📥 Download Certificate</button>
+    <button onclick="location.reload()" style="background: #333; margin-top:10px; font-size:18px;">↻ New Game</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
     
-    # رسم السكوب (مكان اللاعب)
-    fig.add_trace(go.Scatter(
-        x=[user_x], y=[user_y],
-        mode='markers',
-        marker=dict(color=scope_color, size=scope_size, symbol='circle-open', line=dict(width=3)),
-        hoverinfo='none'
-    ))
+    // إعدادات الشاشة
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    fig.update_layout(
-        template="plotly_dark",
-        xaxis=dict(range=[0, 100], showgrid=False, zeroline=False, visible=False, fixedrange=True),
-        yaxis=dict(range=[0, 100], showgrid=False, zeroline=False, visible=False, fixedrange=True),
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='black', plot_bgcolor='black',
-        height=500, dragmode=False
-    )
-    return fig
+    // متغيرات اللعبة
+    let level = 1;
+    const maxLevels = 5;
+    const sentence = ["Ethics", "is", "the", "Compass", "of AI"];
+    let foundWords = [];
+    let target = { x: 0, y: 0 };
+    let mouse = { x: canvas.width/2, y: canvas.height/2 };
+    let gameRunning = false;
+    let audioCtx, osc, gainNode;
 
-# --- 6. دالة الشهادة ---
-def create_certificate():
-    width, height = 800, 600
-    img = Image.new('RGB', (width, height), color='#0a0a2a')
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([20, 20, width-20, height-20], outline="#5867dd", width=5)
-    draw.text((width//2, 100), "CERTIFICATE OF COMPLETION", fill="#5867dd", anchor="mm", font_size=40)
-    draw.text((width//2, 180), "ATHAR EXHIBITION 2026", fill="white", anchor="mm", font_size=30)
-    draw.text((width//2, 300), "Player successfully located all hidden stars in", fill="#cccccc", anchor="mm", font_size=20)
-    draw.text((width//2, 350), "THE LOST SIGNAL MISSION", fill="#cccccc", anchor="mm", font_size=25)
-    draw.text((width//2, 450), "Ethics is the Compass of AI", fill="#5867dd", anchor="mm", font_size=25)
-    return img
+    // النجوم الخلفية
+    const stars = [];
+    for(let i=0; i<300; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2,
+            baseSize: Math.random() * 2
+        });
+    }
 
-# --- 7. الواجهة الرئيسية ---
+    function spawnTarget() {
+        // مكان عشوائي للهدف مع هامش
+        target.x = Math.random() * (canvas.width - 200) + 100;
+        target.y = Math.random() * (canvas.height - 200) + 100;
+    }
 
-# عرض اللوقو في الأعلى
-st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-# ⚠️ تأكدي من رفع ملف الصورة باسم galaxy_logo.png
-if os.path.exists("galaxy_logo.png"):
-    st.image("galaxy_logo.png", width=150)
-else:
-    # شكل مؤقت في حال عدم وجود الصورة
-    st.markdown('<div style="width:100px; height:100px; border-radius:50%; background:radial-gradient(circle, #5867dd, #000);"></div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
-
-st.title(texts["title"])
-
-if not st.session_state.game_over and not st.session_state.game_won:
-    elapsed = time.time() - st.session_state.start_time
-    left = 60 - elapsed
-    if left <= 0:
-        st.session_state.game_over = True
-        st.rerun()
-
-    # تقسيم الشاشة: تحكم (يسار) - خريطة (يمين)
-    col_controls, col_map = st.columns([2, 3])
-
-    with col_controls:
-        c1, c2 = st.columns(2)
-        with c1: st.metric(texts["level"], f"{st.session_state.level}/5")
-        with c2: st.metric(texts["time"], f"{int(left)}")
+    // --- نظام الصوت (الرادار) ---
+    function initAudio() {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        osc = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
         
-        found_words = current_sentence[:st.session_state.level - 1]
-        clue_display = " ... ".join(found_words) if found_words else "🔒..."
-        st.markdown(f'<div class="clue-box">{clue_display}</div>', unsafe_allow_html=True)
+        osc.type = 'sine';
+        osc.frequency.value = 200; // تردد البداية
+        gainNode.gain.value = 0;   // صامت في البداية
         
-        st.write(texts["desc"])
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+    }
+
+    function updateAudio(dist, maxDist) {
+        if (!gameRunning) return;
         
-        user_x = st.slider(texts["x_label"], 0, 100, 50)
-        user_y = st.slider(texts["y_label"], 0, 100, 50)
+        // كل ما قربت المسافة (dist) يقل، الصوت يزيد
+        let proximity = 1 - (dist / (maxDist * 0.6)); // حساسية الرادار
+        proximity = Math.max(0, proximity); // لا يقل عن صفر
+
+        // رفع الصوت
+        gainNode.gain.setTargetAtTime(proximity * 0.5, audioCtx.currentTime, 0.1);
         
-        diff_x = user_x - st.session_state.target_x
-        diff_y = user_y - st.session_state.target_y
-        dist = np.sqrt(diff_x**2 + diff_y**2)
-        signal = max(0, 100 - (dist * 4))
+        // تغيير النغمة (Pitch)
+        // كل ما قربت تصير النغمة أحدّ وأعلى
+        osc.frequency.setTargetAtTime(200 + (proximity * 800), audioCtx.currentTime, 0.1);
+    }
 
-        if signal > 85:
-            st.success(texts["sig_strong"])
+    // --- تشغيل اللعبة ---
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        initAudio();
+        spawnTarget();
+        gameRunning = true;
+        loop();
+    }
+
+    // --- حركة الماوس ---
+    window.addEventListener('mousemove', e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    // --- النقر (Scan) ---
+    window.addEventListener('mousedown', () => {
+        if (!gameRunning) return;
         
-        b1, b2 = st.columns([2,1])
-        with b1:
-            if st.button(texts["scan_btn"]):
-                if signal > 85:
-                    st.balloons()
-                    if st.session_state.level == 5:
-                        st.session_state.game_won = True
-                    else:
-                        st.toast(texts["win_msg"])
-                        st.session_state.level += 1
-                        st.session_state.target_x = random.randint(10, 90)
-                        st.session_state.target_y = random.randint(10, 90)
-                        st.session_state.start_time = time.time()
-                        st.session_state.hint_used = False
-                    time.sleep(0.5)
-                    st.rerun()
-                else:
-                    st.error(texts["fail_msg"])
-        with b2:
-            if not st.session_state.hint_used:
-                if st.button(texts["hint_btn"]):
-                    st.session_state.hint_used = True
-                    st.rerun()
-            else:
-                if abs(diff_x) > abs(diff_y): h = texts["hint_l"] if diff_x > 0 else texts["hint_r"]
-                else: h = texts["hint_u"] if diff_y > 0 else texts["hint_d"]
-                st.info(h)
+        let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
+        
+        // إذا كان قريب جداً (أقل من 50 بكسل)
+        if (dist < 50) {
+            winLevel();
+        }
+    });
 
-    with col_map:
-        # عرض الخريطة البصرية
-        fig = draw_map(user_x, user_y, signal)
-        st.plotly_chart(fig, use_container_width=True)
+    function winLevel() {
+        // فلاش أخضر
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        foundWords.push(sentence[level-1]);
+        document.getElementById('word-box').innerText = "✅ " + foundWords.join(" ... ");
+        
+        if (level >= maxLevels) {
+            gameWin();
+        } else {
+            level++;
+            document.getElementById('level-txt').innerText = `LEVEL ${level}/${maxLevels}`;
+            spawnTarget();
+        }
+    }
 
-elif st.session_state.game_won:
-    st.markdown(f"""
-    <div style="text-align: center; border: 2px solid #5867dd; padding: 30px; border-radius: 20px; background: rgba(0,0,0,0.7);">
-        <h1 style="color: #5867dd;">{texts['final_title']}</h1>
-        <h3 style="color: white;">"Ethics is the Compass of AI"</h3>
-    </div>""", unsafe_allow_html=True)
-    buf = io.BytesIO()
-    create_certificate().save(buf, format="PNG")
-    st.download_button(texts["download"], data=buf.getvalue(), file_name="Athar_Certificate.png", mime="image/png")
-    if st.button(texts["play_again"]):
-        for k in st.session_state.keys(): del st.session_state[k]
-        st.rerun()
+    function gameWin() {
+        gameRunning = false;
+        gainNode.gain.value = 0; // إيقاف الصوت
+        document.getElementById('ui-layer').classList.add('hidden');
+        document.getElementById('word-box').classList.add('hidden');
+        document.getElementById('cert-screen').style.display = 'flex';
+        drawCertificate();
+    }
 
-elif st.session_state.game_over:
-    st.error("Game Over.. Time's up!")
-    if st.button("Retry"):
-        st.session_state.start_time = time.time()
-        st.session_state.game_over = False
-        st.rerun()
+    // --- حلقة الرسم (Game Loop) ---
+    function loop() {
+        if (!gameRunning) return;
+        requestAnimationFrame(loop);
+        
+        // مسح الشاشة
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
+        let maxDist = Math.hypot(canvas.width, canvas.height);
+        
+        updateAudio(dist, maxDist);
 
-st.markdown("---")
-st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>Athar Exhibition © 2026</div>", unsafe_allow_html=True)
+        // 1. رسم النجوم (تأثير الزوم)
+        // كل ما قربت من الهدف، النجوم تكبر وتبتعد عن المركز (تأثير السرعة)
+        let proximity = Math.max(0, 1 - (dist / 500));
+        
+        stars.forEach(star => {
+            let size = star.baseSize + (proximity * 3); // النجوم تكبر
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + proximity})`;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 2. رسم الهدف (يظهر فقط لما تكون قريب جداً)
+        if (dist < 150) {
+            let opacity = 1 - (dist / 150);
+            ctx.fillStyle = `rgba(255, 255, 0, ${opacity})`; // نجم أصفر
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // هالة حول النجم
+            ctx.strokeStyle = `rgba(255, 255, 0, ${opacity * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, 20 + Math.sin(Date.now()/100)*5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 3. رسم السكوب (الدائرة الحمراء/الخضراء)
+        let scopeColor = dist < 50 ? '#00ff00' : '#ff0000';
+        let scopeSize = 40;
+        
+        ctx.strokeStyle = scopeColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, scopeSize, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // خطوط التصويب
+        ctx.beginPath();
+        ctx.moveTo(mouse.x - scopeSize - 10, mouse.y);
+        ctx.lineTo(mouse.x + scopeSize + 10, mouse.y);
+        ctx.moveTo(mouse.x, mouse.y - scopeSize - 10);
+        ctx.lineTo(mouse.x, mouse.y + scopeSize + 10);
+        ctx.stroke();
+
+        // 4. تحديث النصوص
+        let signalPercent = Math.floor(Math.max(0, 1 - (dist / 800)) * 100);
+        document.getElementById('status-txt').innerText = `SIGNAL STRENGTH: ${signalPercent}%`;
+        document.getElementById('status-txt').style.color = scopeColor;
+    }
+
+    // --- رسم الشهادة ---
+    function drawCertificate() {
+        const c = document.getElementById('cert-canvas');
+        const cx = c.getContext('2d');
+        
+        // خلفية
+        cx.fillStyle = '#0e0e0e';
+        cx.fillRect(0,0,800,600);
+        
+        // إطار
+        cx.strokeStyle = '#F4E4BC';
+        cx.lineWidth = 10;
+        cx.strokeRect(20,20,760,560);
+        
+        // نصوص
+        cx.textAlign = 'center';
+        cx.fillStyle = '#F4E4BC';
+        cx.font = '40px Arial';
+        cx.fillText('CERTIFICATE OF COMPLETION', 400, 100);
+        
+        cx.fillStyle = 'white';
+        cx.font = '30px Arial';
+        cx.fillText('ATHAR EXHIBITION 2026', 400, 180);
+        
+        cx.fillStyle = '#ccc';
+        cx.font = '20px Arial';
+        cx.fillText('The player has successfully found', 400, 300);
+        cx.fillText('ALL HIDDEN SIGNALS', 400, 340);
+        
+        cx.fillStyle = '#F4E4BC';
+        cx.font = 'bold 30px Arial';
+        cx.fillText('"Ethics is the Compass of AI"', 400, 450);
+        
+        cx.fillStyle = '#555';
+        cx.font = '15px Arial';
+        cx.fillText('Created by Eng. Alyaa', 400, 550);
+    }
+
+    // تحميل الشهادة
+    window.downloadCert = function() {
+        const link = document.createElement('a');
+        link.download = 'Athar_Certificate.png';
+        link.href = document.getElementById('cert-canvas').toDataURL();
+        link.click();
+    }
+
+    // تعديل حجم الكانفاس عند تغيير حجم النافذة
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+</script>
+</body>
+</html>
+"""
+
+# عرض اللعبة داخل Streamlit
+components.html(game_html, height=800, scrolling=False)

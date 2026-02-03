@@ -12,49 +12,7 @@ st.set_page_config(
         'About': "An interactive game for Athar Exhibition 2026. Can you decode the signal?"
     }
 
-st.markdown("""
-    <style>
-    header[data-testid="stHeader"] {
-        visibility: hidden !important;
-        display: none !important;
-        height: 0px !important;
-    }
-    
-    div[data-testid="stDecoration"] {
-        visibility: hidden !important;
-        display: none !important;
-        height: 0px !important;
-    }
 
-    #MainMenu {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-    }
-
-    .block-container {
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
-        padding-left: 0px !important;
-        padding-right: 0px !important;
-        margin: 0px !important;
-        max-width: 100% !important;
-    }
-    
-    .stDeployButton {
-        display: none !important;
-    }
-    
-    body {margin: 0; padding: 0; overflow: hidden; background-color: #090a0f;}
-    .stApp {background-color: #090a0f; margin: 0;}
-    iframe { width: 100vw !important; height: 100vh !important; border: none; display: block; }
-    </style>
-""", unsafe_allow_html=True)
-    
 )
 st.markdown("""
     <style>

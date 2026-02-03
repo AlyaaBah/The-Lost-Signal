@@ -1,10 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# --- إعدادات الصفحة ---
 st.set_page_config(page_title="The Lost Signal", page_icon="🌌", layout="wide", initial_sidebar_state="collapsed")
 
-# --- تنسيق CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -17,7 +15,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- كود اللعبة (HTML + JavaScript) ---
 game_html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -35,7 +32,6 @@ game_html = """
     }
     #gameCanvas { display: block; width: 100vw; height: 100vh; cursor: none; touch-action: none; }
     
-    /* واجهة المستخدم */
     #ui-layer { 
         position: absolute; top: 20px; left: 20px; right: 20px;
         color: #F4E4BC; pointer-events: none; 
@@ -74,7 +70,6 @@ game_html = """
         max-width: 90%;
     }
 
-    /* الشاشات */
     .screen {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         display: flex; flex-direction: column;
@@ -92,7 +87,6 @@ game_html = """
     }
     .subtitle { color: #a0a0a0; font-size: clamp(14px, 4vw, 18px); letter-spacing: 1px; margin-bottom: 20px; }
 
-    /* حقل الاسم وأزرار الصعوبة */
     .input-group { margin-bottom: 20px; width: 100%; max-width: 300px; }
     input[type="text"] {
         width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #5867dd;
@@ -192,15 +186,13 @@ game_html = """
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // إعدادات اللعبة
     const sentence = ["ETHICS", "IS", "THE", "COMPASS", "OF", "ARTIFICIAL", "INTELLIGENCE"];
     let level = 1;
     const maxLevels = sentence.length;
     let foundWords = [];
     
-    // متغيرات المستخدم
     let playerName = "Adventurer";
-    let difficulty = "easy"; // 'easy' or 'hard'
+    let difficulty = "easy"; 
 
     let target = { x: 0, y: 0 };
     let mouse = { x: canvas.width/2, y: canvas.height/2 };
@@ -208,7 +200,6 @@ game_html = """
     let timeLeft = 60;
     let timerInterval;
 
-    // إعداد الصعوبة
     window.setDifficulty = function(diff, btn) {
         difficulty = diff;
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
@@ -233,7 +224,6 @@ game_html = """
     }
 
     function startTimer() {
-        // وقت أقل في الصعب، أكثر في السهل
         timeLeft = (difficulty === 'easy') ? 90 : 70;
         document.getElementById('timer-display').innerText = timeLeft;
         document.getElementById('timer-display').classList.remove('warning');
@@ -356,14 +346,11 @@ game_html = """
             ctx.beginPath(); ctx.arc(star.x, star.y, size, 0, Math.PI * 2); ctx.fill();
         });
 
-        // منطق الصعوبة
-        let scopeColor = '#00f0ff'; // أزرق سماوي افتراضي
+        let scopeColor = '#00f0ff'; 
         
         if (difficulty === 'easy') {
-            // في السهل: يتحول للأخضر عند القرب
             if (dist < 50) scopeColor = '#00ff00';
             
-            // في السهل: إظهار مكان الهدف عند القرب
             if (dist < 120) {
                 let opacity = 1 - (dist / 120);
                 ctx.shadowBlur = 20; ctx.shadowColor = "#F4E4BC";
@@ -372,7 +359,6 @@ game_html = """
                 ctx.shadowBlur = 0;
             }
         }
-        // في الصعب: اللون يبقى أزرق دائماً، ولا يتم رسم الهدف أبداً
 
         let scopeSize = (window.innerWidth < 600) ? 30 : 40;
         
@@ -397,14 +383,15 @@ game_html = """
         cx.fillStyle = '#F4E4BC'; cx.font = 'bold 36px Montserrat, sans-serif';
         cx.fillText('CERTIFICATE OF COMPLETION', 400, 100);
         
-        // كتابة الاسم
         cx.fillStyle = 'white'; cx.font = 'bold 40px Montserrat, sans-serif';
+        cx.shadowBlur = 20; cx.shadowColor = "white";
         cx.fillText(playerName.toUpperCase(), 400, 180);
+        cx.shadowBlur = 0;
         
-        cx.fillStyle = '#ccc'; cx.font = '20px Montserrat, sans-serif';
-        cx.fillText('HAS SUCCESSFULLY COMPLETED THE', 400, 240);
+        cx.fillStyle = '#ccc'; cx.font = '18px Montserrat, sans-serif';
+        cx.fillText('HAS SUCCESSFULLY COMPLETED THE MISSION ON', 400, 240);
         cx.fillStyle = '#5867dd'; cx.font = 'bold 24px Montserrat, sans-serif';
-        cx.fillText('ATHAR EVENT 2026 MISSION', 400, 280);
+        cx.fillText(difficulty.toUpperCase() + ' MODE', 400, 280);
         
         cx.fillStyle = '#F4E4BC'; cx.shadowBlur = 10; cx.shadowColor = "#d4af37";
         cx.font = 'bold 26px Montserrat, sans-serif';

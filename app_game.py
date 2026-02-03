@@ -32,42 +32,44 @@ game_html = """
         background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%);
         font-family: 'Montserrat', sans-serif; 
         user-select: none;
-        touch-action: none; /* مهم جداً للجوال: يمنع السكرول */
+        touch-action: none;
     }
     #gameCanvas { display: block; width: 100vw; height: 100vh; cursor: none; touch-action: none; }
     
-    /* واجهة المستخدم - متجاوبة */
+    /* واجهة المستخدم */
     #ui-layer { 
         position: absolute; top: 20px; left: 20px; right: 20px;
         color: #F4E4BC; pointer-events: none; 
         text-shadow: 0 0 10px rgba(244, 228, 188, 0.3);
         display: flex; flex-direction: column; align-items: flex-start;
+        z-index: 5;
     }
     
     h1 { margin: 0; font-size: clamp(14px, 4vw, 18px); letter-spacing: 2px; color: #8892b0; }
     
     .bar-container {
-        width: clamp(150px, 50vw, 300px); height: 12px; 
-        background: rgba(255,255,255,0.1); 
+        width: clamp(150px, 60vw, 300px); height: 14px; 
+        background: rgba(0,0,0,0.5); 
         border: 1px solid #5867dd; 
         border-radius: 6px; margin-top: 8px;
         box-shadow: 0 0 10px rgba(88, 103, 221, 0.2);
+        overflow: hidden;
     }
     #signal-bar {
         width: 0%; height: 100%; 
         background: linear-gradient(90deg, #5867dd, #00f0ff);
-        border-radius: 5px; box-shadow: 0 0 10px #00f0ff;
-        transition: width 0.1s;
+        box-shadow: 0 0 15px #00f0ff;
+        transition: width 0.05s linear; /* حركة سلسة وسريعة */
     }
 
     #word-container { 
-        position: absolute; bottom: 10%; width: 100%; 
+        position: absolute; bottom: 12%; width: 100%; 
         display: flex; justify-content: center; pointer-events: none; 
     }
     #word-box { 
-        font-size: clamp(16px, 5vw, 26px); font-weight: bold; color: #fff; 
+        font-size: clamp(16px, 5vw, 24px); font-weight: bold; color: #fff; 
         background: rgba(14, 17, 23, 0.9); 
-        padding: 15px 30px; 
+        padding: 12px 25px; 
         border: 1px solid #F4E4BC; border-radius: 30px;
         box-shadow: 0 0 20px rgba(244, 228, 188, 0.2);
         letter-spacing: 1px; text-align: center;
@@ -96,11 +98,15 @@ game_html = """
     }
     .subtitle { color: #a0a0a0; font-size: clamp(14px, 4vw, 20px); letter-spacing: 1px; margin-bottom: 30px; }
 
+    /* تحسين ظهور الحقوق في الجوال */
     .credits {
-        position: absolute; bottom: 30px; width: 100%; text-align: center;
-        color: #555; font-size: 12px; letter-spacing: 1px;
+        position: absolute; bottom: 40px; width: 100%; text-align: center;
+        color: #666; font-size: clamp(10px, 3.5vw, 14px); letter-spacing: 1px;
+        z-index: 15;
+        background: rgba(0,0,0,0.3); /* خلفية خفيفة لضمان القراءة */
+        padding: 5px 0;
     }
-    .credits span { color: #888; font-weight: bold; }
+    .credits span { color: #F4E4BC; font-weight: bold; text-shadow: 0 0 5px rgba(244,228,188,0.3); }
 
     .btn {
         padding: 15px 40px; font-size: clamp(16px, 4vw, 22px); font-weight: bold;
@@ -109,13 +115,14 @@ game_html = """
         cursor: pointer; margin-top: 20px;
         box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
         font-family: 'Montserrat', sans-serif;
-        touch-action: manipulation; /* تحسين استجابة الزر */
+        touch-action: manipulation;
     }
     
     #timer-display {
         position: absolute; top: 20px; right: 20px;
         font-size: clamp(24px, 6vw, 36px); color: #F4E4BC; font-weight: bold;
         text-shadow: 0 0 10px #d4af37;
+        z-index: 5;
     }
     .warning { color: #ff4444 !important; text-shadow: 0 0 20px red !important; animation: pulse 1s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
@@ -141,7 +148,7 @@ game_html = """
 <div id="ui-layer">
     <h1 id="level-label">SIGNAL STRENGTH</h1>
     <div class="bar-container"><div id="signal-bar"></div></div>
-    <p id="level-counter" style="margin-top: 10px; color: #ccc; font-size: 12px;">TARGET 1 / 5</p>
+    <p id="level-counter" style="margin-top: 10px; color: #ccc; font-size: 12px;">TARGET 1 / 7</p>
 </div>
 
 <div id="timer-display">60</div>
@@ -162,7 +169,6 @@ game_html = """
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // ضبط الحجم بدقة للأجهزة المختلفة
     function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -170,8 +176,8 @@ game_html = """
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // 5 كلمات فقط
-    const sentence = ["ETHICS", "IS", "THE", "COMPASS", "OF AI"];
+    // 7 كلمات (الجملة الكاملة)
+    const sentence = ["ETHICS", "IS", "THE", "COMPASS", "OF", "ARTIFICIAL", "INTELLIGENCE"];
     let level = 1;
     const maxLevels = sentence.length;
     let foundWords = [];
@@ -200,7 +206,8 @@ game_html = """
     }
 
     function startTimer() {
-        timeLeft = 60;
+        // وقت أطول قليلاً لأن اللعبة صارت أصعب
+        timeLeft = 80; 
         document.getElementById('timer-display').innerText = timeLeft;
         document.getElementById('timer-display').classList.remove('warning');
         
@@ -230,30 +237,26 @@ game_html = """
         loop();
     }
 
-    // --- دعم الماوس ---
     window.addEventListener('mousemove', e => {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
     });
 
-    // --- دعم اللمس (للجوال) ---
     canvas.addEventListener('touchmove', e => {
-        e.preventDefault(); // منع السكرول
+        e.preventDefault();
         const touch = e.touches[0];
         mouse.x = touch.clientX;
         mouse.y = touch.clientY;
     }, { passive: false });
     
-    // التقاط اللمسة الأولى للتوجيه السريع
     canvas.addEventListener('touchstart', e => {
         e.preventDefault();
         const touch = e.touches[0];
         mouse.x = touch.clientX;
         mouse.y = touch.clientY;
-        checkWin(); // فحص إذا ضغط مباشرة على الهدف
+        checkWin();
     }, { passive: false });
 
-    // النقر للالتقاط
     window.addEventListener('mousedown', () => {
         if (!gameRunning) return;
         checkWin();
@@ -261,8 +264,8 @@ game_html = """
 
     function checkWin() {
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
-        // زيادة مساحة الفوز في الجوال لتسهيل اللعب
-        let winRadius = (window.innerWidth < 600) ? 70 : 50; 
+        // جعلنا منطقة الفوز أصغر قليلاً لزيادة الصعوبة
+        let winRadius = (window.innerWidth < 600) ? 60 : 40; 
         
         if (dist < winRadius) {
             winLevel();
@@ -270,6 +273,7 @@ game_html = """
     }
 
     function winLevel() {
+        // فلاش خفيف عند الفوز
         ctx.fillStyle = 'rgba(244, 228, 188, 0.4)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
@@ -306,7 +310,18 @@ game_html = """
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
-        let signalStrength = Math.max(0, 1 - (dist / (Math.min(canvas.width, canvas.height)*0.8)));
+        
+        // حساب الإشارة (تصعيب الحساسية)
+        let maxDist = Math.min(canvas.width, canvas.height) * 0.7; 
+        let signalStrength = Math.max(0, 1 - (dist / maxDist));
+        
+        // جعل المؤشر يتذبذب قليلاً لزيادة التوتر
+        if (signalStrength > 0.1) {
+             signalStrength += (Math.random() - 0.5) * 0.05; 
+             if(signalStrength > 1) signalStrength = 1;
+             if(signalStrength < 0) signalStrength = 0;
+        }
+        
         document.getElementById('signal-bar').style.width = (signalStrength * 100) + "%";
 
         let proximity = Math.max(0, 1 - (dist / 400));
@@ -318,11 +333,12 @@ game_html = """
             ctx.beginPath(); ctx.arc(star.x, star.y, size, 0, Math.PI * 2); ctx.fill();
         });
 
-        let scopeColor = dist < 50 ? '#00ff00' : '#00f0ff';
-        let scopeSize = (window.innerWidth < 600) ? 30 : 40; // تصغير السكوب في الجوال
+        // السكوب (أزرق دائماً - لا يتغير للأخضر أبداً لزيادة الصعوبة)
+        let scopeColor = '#00f0ff';
+        let scopeSize = (window.innerWidth < 600) ? 30 : 40;
         
         ctx.shadowBlur = 15; ctx.shadowColor = scopeColor;
-        ctx.strokeStyle = scopeColor; ctx.lineWidth = 3;
+        ctx.strokeStyle = scopeColor; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(mouse.x, mouse.y, scopeSize, 0, Math.PI * 2); ctx.stroke();
         
         ctx.beginPath();
@@ -330,14 +346,8 @@ game_html = """
         ctx.moveTo(mouse.x, mouse.y - scopeSize - 10); ctx.lineTo(mouse.x, mouse.y + scopeSize + 10);
         ctx.stroke(); ctx.shadowBlur = 0;
 
-        // رسم الهدف
-        if (dist < 120) {
-            let opacity = 1 - (dist / 120);
-            ctx.shadowBlur = 20; ctx.shadowColor = "#F4E4BC";
-            ctx.fillStyle = `rgba(244, 228, 188, ${opacity})`;
-            ctx.beginPath(); ctx.arc(target.x, target.y, 8, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
-        }
+        // **هام:** تم إزالة كود رسم "الهدف الأصفر" تماماً
+        // اللاعب لن يرى الهدف أبداً، فقط يعتمد على الشريط.
     }
 
     function drawCertificate() {
@@ -360,7 +370,7 @@ game_html = """
         cx.fillStyle = '#F4E4BC'; cx.shadowBlur = 10; cx.shadowColor = "#d4af37";
         cx.font = 'bold 26px Montserrat, sans-serif';
         cx.fillText('"ETHICS IS THE COMPASS', 400, 400);
-        cx.fillText('OF AI"', 400, 450);
+        cx.fillText('OF ARTIFICIAL INTELLIGENCE"', 400, 440);
         cx.shadowBlur = 0;
         
         cx.fillStyle = '#555'; cx.font = '14px Montserrat, sans-serif';

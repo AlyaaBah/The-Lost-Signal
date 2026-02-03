@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="The Lost Signal", page_icon="🌌", layout="wide", initial_sidebar_state="collapsed")
 
-# --- تنسيق CSS لملء الشاشة وإزالة الحواف ---
+# --- تنسيق CSS لملء الشاشة ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -24,12 +24,11 @@ game_html = """
 <head>
 <meta charset="UTF-8">
 <style>
-    /* الخطوط والألوان */
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
     
     body { 
         margin: 0; overflow: hidden; 
-        background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%); /* خلفية المجرة */
+        background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%);
         font-family: 'Montserrat', sans-serif; 
         user-select: none; 
     }
@@ -42,9 +41,7 @@ game_html = """
         text-shadow: 0 0 10px rgba(244, 228, 188, 0.3);
     }
     h1 { margin: 0; font-size: 18px; letter-spacing: 2px; color: #8892b0; }
-    h2 { margin: 5px 0 0 0; font-size: 24px; color: white; }
     
-    /* شريط الإشارة */
     .bar-container {
         width: 250px; height: 12px; 
         background: rgba(255,255,255,0.1); 
@@ -54,15 +51,14 @@ game_html = """
     }
     #signal-bar {
         width: 0%; height: 100%; 
-        background: linear-gradient(90deg, #5867dd, #00f0ff); /* تدرج أزرق سماوي */
+        background: linear-gradient(90deg, #5867dd, #00f0ff);
         border-radius: 5px;
         box-shadow: 0 0 10px #00f0ff;
         transition: width 0.1s;
     }
 
-    /* الكلمات في الأسفل */
     #word-container { 
-        position: absolute; bottom: 50px; width: 100%; text-align: center; pointer-events: none; 
+        position: absolute; bottom: 80px; width: 100%; text-align: center; pointer-events: none; 
     }
     #word-box { 
         display: inline-block;
@@ -74,29 +70,63 @@ game_html = """
         letter-spacing: 2px;
     }
 
-    /* شاشة البداية */
-    #start-screen {
+    /* شاشات (البداية / الخسارة / الفوز) */
+    .screen {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: radial-gradient(circle, rgba(20,20,30,0.95) 0%, rgba(0,0,0,1) 100%);
         display: flex; flex-direction: column;
         justify-content: center; align-items: center; z-index: 10;
     }
+    
+    #start-screen { background: radial-gradient(circle, rgba(20,20,30,0.98) 0%, rgba(0,0,0,1) 100%); }
+    
+    /* شاشة الخسارة (Time Out) */
+    #timeout-screen { 
+        background: rgba(20, 0, 0, 0.95); 
+        display: none; 
+        z-index: 30;
+    }
+    
+    #cert-screen { background: #090a0f; display: none; z-index: 20; }
+    
     .title-glow {
-        font-size: 50px; color: #F4E4BC; margin-bottom: 20px; font-weight: bold;
-        text-shadow: 0 0 20px rgba(244, 228, 188, 0.6);
+        font-size: 60px; color: #F4E4BC; margin-bottom: 10px; font-weight: bold;
+        text-shadow: 0 0 30px rgba(244, 228, 188, 0.6);
         letter-spacing: 5px;
     }
+    
+    .fail-title {
+        font-size: 60px; color: #ff4444; margin-bottom: 20px; font-weight: bold;
+        text-shadow: 0 0 30px red; letter-spacing: 5px;
+    }
+
+    .subtitle {
+        color: #a0a0a0; font-size: 20px; letter-spacing: 2px; margin-bottom: 40px;
+    }
+
+    /* الحقوق */
+    .credits {
+        margin-top: 60px; color: #555; font-size: 14px; letter-spacing: 1px;
+        border-top: 1px solid #333; padding-top: 20px;
+    }
+    .credits span { color: #888; font-weight: bold; }
+
     .btn {
         padding: 18px 60px; font-size: 22px; font-weight: bold;
         background: linear-gradient(45deg, #F4E4BC, #d4af37);
         color: #000; border: none; border-radius: 50px;
-        cursor: pointer; margin-top: 40px;
+        cursor: pointer; margin-top: 20px;
         box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
         transition: transform 0.2s, box-shadow 0.2s;
         font-family: 'Montserrat', sans-serif;
     }
     .btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.7); }
     
+    .btn-retry {
+        background: linear-gradient(45deg, #ff4444, #cc0000);
+        color: white; box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+    }
+    .btn-retry:hover { box-shadow: 0 0 30px rgba(255, 0, 0, 0.7); }
+
     /* المؤقت */
     #timer-display {
         position: absolute; top: 30px; right: 40px;
@@ -106,23 +136,27 @@ game_html = """
     .warning { color: #ff4444 !important; text-shadow: 0 0 20px red !important; animation: pulse 1s infinite; }
     
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
-    /* الشهادة */
-    #cert-screen {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: #090a0f; display: none; flex-direction: column;
-        justify-content: center; align-items: center; z-index: 20;
-    }
     .hidden { display: none !important; }
 
 </style>
 </head>
 <body>
 
-<div id="start-screen">
+<div id="start-screen" class="screen">
     <div class="title-glow">ATHAR EVENT</div>
-    <p style="color: #a0a0a0; font-size: 18px; letter-spacing: 1px;">THE LOST SIGNAL MISSION</p>
+    <p class="subtitle">THE LOST SIGNAL MISSION</p>
+    
     <button class="btn" onclick="startGame()">START MISSION</button>
+    
+    <div class="credits">
+        POWERED BY <span>ATHAR CLUB</span> | DEVELOPED BY <span>ENG. ALYAA</span>
+    </div>
+</div>
+
+<div id="timeout-screen" class="screen">
+    <div class="fail-title">SIGNAL LOST</div>
+    <p class="subtitle" style="color: #ffaaaa;">TIME CONNECTION EXPIRED</p>
+    <button class="btn btn-retry" onclick="location.reload()">TRY AGAIN ↻</button>
 </div>
 
 <div id="ui-layer">
@@ -141,7 +175,7 @@ game_html = """
 
 <canvas id="gameCanvas"></canvas>
 
-<div id="cert-screen">
+<div id="cert-screen" class="screen">
     <canvas id="cert-canvas" width="800" height="600" style="border: 2px solid #F4E4BC; box-shadow: 0 0 50px rgba(244,228,188,0.2); margin-bottom: 30px; border-radius: 10px;"></canvas>
     <div>
         <button class="btn" onclick="downloadCert()">DOWNLOAD</button>
@@ -152,11 +186,9 @@ game_html = """
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // إعدادات اللعبة
     const sentence = ["ETHICS", "IS", "THE", "COMPASS", "OF", "ARTIFICIAL", "INTELLIGENCE"];
     let level = 1;
     const maxLevels = sentence.length;
@@ -168,7 +200,6 @@ game_html = """
     let timeLeft = 60;
     let timerInterval;
 
-    // توليد نجوم (أكثر جمالية)
     const stars = [];
     for(let i=0; i<350; i++) {
         stars.push({
@@ -208,8 +239,11 @@ game_html = """
     function gameOver() {
         gameRunning = false;
         clearInterval(timerInterval);
-        alert("SIGNAL LOST. TIME EXPIRED.");
-        location.reload();
+        // إخفاء الواجهة وإظهار شاشة الخسارة
+        document.getElementById('ui-layer').classList.add('hidden');
+        document.getElementById('word-container').classList.add('hidden');
+        document.getElementById('timer-display').classList.add('hidden');
+        document.getElementById('timeout-screen').style.display = 'flex';
     }
 
     function startGame() {
@@ -225,7 +259,6 @@ game_html = """
         mouse.y = e.clientY;
     });
 
-    // النقر للالتقاط
     window.addEventListener('mousedown', () => {
         if (!gameRunning) return;
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
@@ -233,7 +266,6 @@ game_html = """
     });
 
     function winLevel() {
-        // فلاش ذهبي ناعم
         ctx.fillStyle = 'rgba(244, 228, 188, 0.4)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
@@ -263,7 +295,6 @@ game_html = """
         if (!gameRunning) return;
         requestAnimationFrame(loop);
         
-        // رسم الخلفية (تدرج مع شفافية لإعطاء تأثير ذيل للحركة)
         let gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
         gradient.addColorStop(0, "#1b2735");
         gradient.addColorStop(1, "#090a0f");
@@ -271,72 +302,54 @@ game_html = """
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
-        
-        // تحديث شريط الإشارة
         let signalStrength = Math.max(0, 1 - (dist / 600));
         document.getElementById('signal-bar').style.width = (signalStrength * 100) + "%";
 
-        // رسم النجوم
         let proximity = Math.max(0, 1 - (dist / 400));
-        
         stars.forEach(star => {
-            // تأثير وميض النجوم
             star.alpha += (Math.random() - 0.5) * 0.1;
             if (star.alpha < 0.2) star.alpha = 0.2;
             if (star.alpha > 1) star.alpha = 1;
-            
-            let size = star.baseSize + (proximity * 3); // زوم عند القرب
-            
+            let size = star.baseSize + (proximity * 3);
             ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
             ctx.beginPath();
             ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // رسم السكوب (متوهج)
-        // أزرق سماوي عادي، وأخضر عند القرب
         let scopeColor = dist < 50 ? '#00ff00' : '#00f0ff';
         let scopeSize = 40;
-        
         ctx.shadowBlur = 15;
         ctx.shadowColor = scopeColor;
         ctx.strokeStyle = scopeColor;
         ctx.lineWidth = 3;
-        
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, scopeSize, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Crosshair
         ctx.beginPath();
         ctx.moveTo(mouse.x - scopeSize - 10, mouse.y);
         ctx.lineTo(mouse.x + scopeSize + 10, mouse.y);
         ctx.moveTo(mouse.x, mouse.y - scopeSize - 10);
         ctx.lineTo(mouse.x, mouse.y + scopeSize + 10);
         ctx.stroke();
-        
-        ctx.shadowBlur = 0; // إعادة ضبط الظل
+        ctx.shadowBlur = 0;
 
-        // رسم الهدف (نجمة ذهبية تظهر عند القرب)
         if (dist < 120) {
             let opacity = 1 - (dist / 120);
             ctx.shadowBlur = 20;
             ctx.shadowColor = "#F4E4BC";
             ctx.fillStyle = `rgba(244, 228, 188, ${opacity})`;
-            
-            // رسم شكل نجمة
             drawStar(ctx, target.x, target.y, 5, 10, 5);
             ctx.shadowBlur = 0;
         }
     }
     
-    // دالة مساعدة لرسم نجمة
     function drawStar(cx, cy, spikes, outerRadius, innerRadius) {
         let rot = Math.PI / 2 * 3;
         let x = cx;
         let y = cy;
         let step = Math.PI / spikes;
-
         ctx.beginPath();
         ctx.moveTo(cx, cy - outerRadius);
         for (let i = 0; i < spikes; i++) {
@@ -344,7 +357,6 @@ game_html = """
             y = cy + Math.sin(rot) * outerRadius;
             ctx.lineTo(x, y);
             rot += step;
-
             x = cx + Math.cos(rot) * innerRadius;
             y = cy + Math.sin(rot) * innerRadius;
             ctx.lineTo(x, y);
@@ -355,38 +367,26 @@ game_html = """
         ctx.fill();
     }
 
-    // --- الشهادة ---
     function drawCertificate() {
         const c = document.getElementById('cert-canvas');
         const cx = c.getContext('2d');
-        
-        // خلفية سوداء
         cx.fillStyle = '#0e0e0e';
         cx.fillRect(0,0,800,600);
-        
-        // إطار ذهبي مزدوج
         cx.strokeStyle = '#F4E4BC';
         cx.lineWidth = 5;
         cx.strokeRect(20,20,760,560);
         cx.lineWidth = 2;
         cx.strokeRect(30,30,740,540);
-        
         cx.textAlign = 'center';
-        
-        // العنوان
         cx.fillStyle = '#F4E4BC';
         cx.font = 'bold 40px Montserrat, sans-serif';
         cx.fillText('CERTIFICATE OF COMPLETION', 400, 120);
-        
         cx.fillStyle = 'white';
         cx.font = '30px Montserrat, sans-serif';
         cx.fillText('ATHAR EVENT 2026', 400, 180);
-        
         cx.fillStyle = '#ccc';
         cx.font = '18px Montserrat, sans-serif';
         cx.fillText('HAS SUCCESSFULLY DECODED THE SIGNAL', 400, 300);
-        
-        // الجملة النهائية
         cx.fillStyle = '#F4E4BC';
         cx.shadowBlur = 10;
         cx.shadowColor = "#d4af37";
@@ -394,10 +394,9 @@ game_html = """
         cx.fillText('"ETHICS IS THE COMPASS', 400, 400);
         cx.fillText('OF ARTIFICIAL INTELLIGENCE"', 400, 440);
         cx.shadowBlur = 0;
-        
         cx.fillStyle = '#555';
         cx.font = '14px Montserrat, sans-serif';
-        cx.fillText('Eng. Alyaa', 400, 550);
+        cx.fillText('Athar Club | Eng. Alyaa', 400, 550);
     }
 
     window.downloadCert = function() {

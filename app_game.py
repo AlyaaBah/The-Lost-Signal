@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="The Lost Signal", page_icon="🌌", layout="wide", initial_sidebar_state="collapsed")
 
-# --- تنسيق CSS شامل ---
+# --- تنسيق CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -31,8 +31,7 @@ game_html = """
         margin: 0; overflow: hidden; 
         background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%);
         font-family: 'Montserrat', sans-serif; 
-        user-select: none;
-        touch-action: none;
+        user-select: none; touch-action: none;
     }
     #gameCanvas { display: block; width: 100vw; height: 100vh; cursor: none; touch-action: none; }
     
@@ -40,12 +39,11 @@ game_html = """
     #ui-layer { 
         position: absolute; top: 20px; left: 20px; right: 20px;
         color: #F4E4BC; pointer-events: none; 
-        text-shadow: 0 0 10px rgba(244, 228, 188, 0.3);
         display: flex; flex-direction: column; align-items: flex-start;
         z-index: 5;
     }
     
-    h1 { margin: 0; font-size: clamp(14px, 4vw, 18px); letter-spacing: 2px; color: #8892b0; }
+    h1 { margin: 0; font-size: 14px; letter-spacing: 2px; color: #8892b0; }
     
     .bar-container {
         width: clamp(150px, 60vw, 300px); height: 14px; 
@@ -59,7 +57,7 @@ game_html = """
         width: 0%; height: 100%; 
         background: linear-gradient(90deg, #5867dd, #00f0ff);
         box-shadow: 0 0 15px #00f0ff;
-        transition: width 0.05s linear; /* حركة سلسة وسريعة */
+        transition: width 0.05s linear;
     }
 
     #word-container { 
@@ -89,40 +87,50 @@ game_html = """
     #cert-screen { background: #090a0f; display: none; z-index: 20; }
     
     .title-glow {
-        font-size: clamp(30px, 8vw, 60px); color: #F4E4BC; margin-bottom: 10px; font-weight: bold;
+        font-size: clamp(30px, 8vw, 60px); color: #F4E4BC; margin-bottom: 5px; font-weight: bold;
         text-shadow: 0 0 30px rgba(244, 228, 188, 0.6); letter-spacing: 2px;
     }
-    .fail-title {
-        font-size: clamp(30px, 8vw, 60px); color: #ff4444; margin-bottom: 20px; font-weight: bold;
-        text-shadow: 0 0 30px red; letter-spacing: 2px;
-    }
-    .subtitle { color: #a0a0a0; font-size: clamp(14px, 4vw, 20px); letter-spacing: 1px; margin-bottom: 30px; }
+    .subtitle { color: #a0a0a0; font-size: clamp(14px, 4vw, 18px); letter-spacing: 1px; margin-bottom: 20px; }
 
-    /* تحسين ظهور الحقوق في الجوال */
-    .credits {
-        position: absolute; bottom: 40px; width: 100%; text-align: center;
-        color: #666; font-size: clamp(10px, 3.5vw, 14px); letter-spacing: 1px;
-        z-index: 15;
-        background: rgba(0,0,0,0.3); /* خلفية خفيفة لضمان القراءة */
-        padding: 5px 0;
+    /* حقل الاسم وأزرار الصعوبة */
+    .input-group { margin-bottom: 20px; width: 100%; max-width: 300px; }
+    input[type="text"] {
+        width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #5867dd;
+        background: rgba(0,0,0,0.5); color: white; font-size: 18px; text-align: center;
+        font-family: 'Montserrat', sans-serif; outline: none;
     }
-    .credits span { color: #F4E4BC; font-weight: bold; text-shadow: 0 0 5px rgba(244,228,188,0.3); }
+    input[type="text"]:focus { border-color: #00f0ff; box-shadow: 0 0 10px #00f0ff; }
+
+    .diff-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+    .diff-btn {
+        padding: 10px 25px; border: 2px solid #555; background: transparent;
+        color: #888; border-radius: 20px; cursor: pointer; font-weight: bold;
+        transition: all 0.3s;
+    }
+    .diff-btn.active {
+        border-color: #F4E4BC; background: rgba(244, 228, 188, 0.2); color: #F4E4BC;
+        box-shadow: 0 0 15px rgba(244, 228, 188, 0.3);
+    }
 
     .btn {
-        padding: 15px 40px; font-size: clamp(16px, 4vw, 22px); font-weight: bold;
+        padding: 15px 50px; font-size: 20px; font-weight: bold;
         background: linear-gradient(45deg, #F4E4BC, #d4af37);
         color: #000; border: none; border-radius: 50px;
-        cursor: pointer; margin-top: 20px;
+        cursor: pointer; 
         box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
         font-family: 'Montserrat', sans-serif;
-        touch-action: manipulation;
     }
     
+    .credits {
+        position: absolute; bottom: 30px; width: 100%; text-align: center;
+        color: #666; font-size: 12px; letter-spacing: 1px;
+    }
+    .credits span { color: #F4E4BC; font-weight: bold; }
+
     #timer-display {
         position: absolute; top: 20px; right: 20px;
         font-size: clamp(24px, 6vw, 36px); color: #F4E4BC; font-weight: bold;
-        text-shadow: 0 0 10px #d4af37;
-        z-index: 5;
+        text-shadow: 0 0 10px #d4af37; z-index: 5;
     }
     .warning { color: #ff4444 !important; text-shadow: 0 0 20px red !important; animation: pulse 1s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
@@ -135,6 +143,16 @@ game_html = """
 <div id="start-screen" class="screen">
     <div class="title-glow">ATHAR EVENT</div>
     <p class="subtitle">THE LOST SIGNAL MISSION</p>
+    
+    <div class="input-group">
+        <input type="text" id="player-name" placeholder="ENTER YOUR NAME" maxlength="15">
+    </div>
+
+    <div class="diff-selector">
+        <div class="diff-btn active" onclick="setDifficulty('easy', this)">EASY</div>
+        <div class="diff-btn" onclick="setDifficulty('hard', this)">HARD</div>
+    </div>
+
     <button class="btn" onclick="startGame()">START MISSION</button>
     <div class="credits">POWERED BY <span>ATHAR CLUB</span> | DEV BY <span>ENG. ALYAA</span></div>
 </div>
@@ -152,9 +170,7 @@ game_html = """
 </div>
 
 <div id="timer-display">60</div>
-
 <div id="word-container"><div id="word-box">LOCKED</div></div>
-
 <canvas id="gameCanvas"></canvas>
 
 <div id="cert-screen" class="screen">
@@ -176,17 +192,28 @@ game_html = """
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // 7 كلمات (الجملة الكاملة)
+    // إعدادات اللعبة
     const sentence = ["ETHICS", "IS", "THE", "COMPASS", "OF", "ARTIFICIAL", "INTELLIGENCE"];
     let level = 1;
     const maxLevels = sentence.length;
     let foundWords = [];
     
+    // متغيرات المستخدم
+    let playerName = "Adventurer";
+    let difficulty = "easy"; // 'easy' or 'hard'
+
     let target = { x: 0, y: 0 };
     let mouse = { x: canvas.width/2, y: canvas.height/2 };
     let gameRunning = false;
     let timeLeft = 60;
     let timerInterval;
+
+    // إعداد الصعوبة
+    window.setDifficulty = function(diff, btn) {
+        difficulty = diff;
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
 
     const stars = [];
     for(let i=0; i<300; i++) {
@@ -206,8 +233,8 @@ game_html = """
     }
 
     function startTimer() {
-        // وقت أطول قليلاً لأن اللعبة صارت أصعب
-        timeLeft = 80; 
+        // وقت أقل في الصعب، أكثر في السهل
+        timeLeft = (difficulty === 'easy') ? 90 : 70;
         document.getElementById('timer-display').innerText = timeLeft;
         document.getElementById('timer-display').classList.remove('warning');
         
@@ -229,7 +256,10 @@ game_html = """
         document.getElementById('timeout-screen').style.display = 'flex';
     }
 
-    function startGame() {
+    window.startGame = function() {
+        const nameInput = document.getElementById('player-name').value;
+        playerName = nameInput.trim() !== "" ? nameInput : "Adventurer";
+        
         document.getElementById('start-screen').classList.add('hidden');
         spawnTarget();
         gameRunning = true;
@@ -264,16 +294,13 @@ game_html = """
 
     function checkWin() {
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
-        // جعلنا منطقة الفوز أصغر قليلاً لزيادة الصعوبة
-        let winRadius = (window.innerWidth < 600) ? 60 : 40; 
-        
+        let winRadius = (window.innerWidth < 600) ? 60 : 40;
         if (dist < winRadius) {
             winLevel();
         }
     }
 
     function winLevel() {
-        // فلاش خفيف عند الفوز
         ctx.fillStyle = 'rgba(244, 228, 188, 0.4)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
@@ -310,18 +337,14 @@ game_html = """
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         let dist = Math.hypot(mouse.x - target.x, mouse.y - target.y);
-        
-        // حساب الإشارة (تصعيب الحساسية)
         let maxDist = Math.min(canvas.width, canvas.height) * 0.7; 
         let signalStrength = Math.max(0, 1 - (dist / maxDist));
         
-        // جعل المؤشر يتذبذب قليلاً لزيادة التوتر
         if (signalStrength > 0.1) {
              signalStrength += (Math.random() - 0.5) * 0.05; 
              if(signalStrength > 1) signalStrength = 1;
              if(signalStrength < 0) signalStrength = 0;
         }
-        
         document.getElementById('signal-bar').style.width = (signalStrength * 100) + "%";
 
         let proximity = Math.max(0, 1 - (dist / 400));
@@ -333,8 +356,24 @@ game_html = """
             ctx.beginPath(); ctx.arc(star.x, star.y, size, 0, Math.PI * 2); ctx.fill();
         });
 
-        // السكوب (أزرق دائماً - لا يتغير للأخضر أبداً لزيادة الصعوبة)
-        let scopeColor = '#00f0ff';
+        // منطق الصعوبة
+        let scopeColor = '#00f0ff'; // أزرق سماوي افتراضي
+        
+        if (difficulty === 'easy') {
+            // في السهل: يتحول للأخضر عند القرب
+            if (dist < 50) scopeColor = '#00ff00';
+            
+            // في السهل: إظهار مكان الهدف عند القرب
+            if (dist < 120) {
+                let opacity = 1 - (dist / 120);
+                ctx.shadowBlur = 20; ctx.shadowColor = "#F4E4BC";
+                ctx.fillStyle = `rgba(244, 228, 188, ${opacity})`;
+                ctx.beginPath(); ctx.arc(target.x, target.y, 8, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+        // في الصعب: اللون يبقى أزرق دائماً، ولا يتم رسم الهدف أبداً
+
         let scopeSize = (window.innerWidth < 600) ? 30 : 40;
         
         ctx.shadowBlur = 15; ctx.shadowColor = scopeColor;
@@ -345,9 +384,6 @@ game_html = """
         ctx.moveTo(mouse.x - scopeSize - 10, mouse.y); ctx.lineTo(mouse.x + scopeSize + 10, mouse.y);
         ctx.moveTo(mouse.x, mouse.y - scopeSize - 10); ctx.lineTo(mouse.x, mouse.y + scopeSize + 10);
         ctx.stroke(); ctx.shadowBlur = 0;
-
-        // **هام:** تم إزالة كود رسم "الهدف الأصفر" تماماً
-        // اللاعب لن يرى الهدف أبداً، فقط يعتمد على الشريط.
     }
 
     function drawCertificate() {
@@ -358,19 +394,22 @@ game_html = """
         cx.lineWidth = 2; cx.strokeRect(30,30,740,540);
         
         cx.textAlign = 'center';
-        cx.fillStyle = '#F4E4BC'; cx.font = 'bold 40px Montserrat, sans-serif';
-        cx.fillText('CERTIFICATE OF COMPLETION', 400, 120);
+        cx.fillStyle = '#F4E4BC'; cx.font = 'bold 36px Montserrat, sans-serif';
+        cx.fillText('CERTIFICATE OF COMPLETION', 400, 100);
         
-        cx.fillStyle = 'white'; cx.font = '30px Montserrat, sans-serif';
-        cx.fillText('ATHAR EVENT 2026', 400, 180);
+        // كتابة الاسم
+        cx.fillStyle = 'white'; cx.font = 'bold 40px Montserrat, sans-serif';
+        cx.fillText(playerName.toUpperCase(), 400, 180);
         
-        cx.fillStyle = '#ccc'; cx.font = '18px Montserrat, sans-serif';
-        cx.fillText('HAS SUCCESSFULLY DECODED THE SIGNAL', 400, 300);
+        cx.fillStyle = '#ccc'; cx.font = '20px Montserrat, sans-serif';
+        cx.fillText('HAS SUCCESSFULLY COMPLETED THE', 400, 240);
+        cx.fillStyle = '#5867dd'; cx.font = 'bold 24px Montserrat, sans-serif';
+        cx.fillText('ATHAR EVENT 2026 MISSION', 400, 280);
         
         cx.fillStyle = '#F4E4BC'; cx.shadowBlur = 10; cx.shadowColor = "#d4af37";
         cx.font = 'bold 26px Montserrat, sans-serif';
-        cx.fillText('"ETHICS IS THE COMPASS', 400, 400);
-        cx.fillText('OF ARTIFICIAL INTELLIGENCE"', 400, 440);
+        cx.fillText('"ETHICS IS THE COMPASS', 400, 380);
+        cx.fillText('OF ARTIFICIAL INTELLIGENCE"', 400, 430);
         cx.shadowBlur = 0;
         
         cx.fillStyle = '#555'; cx.font = '14px Montserrat, sans-serif';
